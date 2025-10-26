@@ -77,42 +77,80 @@ export const ImageStudio: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-center p-1 bg-slate-800 border border-slate-700 rounded-lg">
-                <button onClick={() => setMode('generate')} className={`px-4 py-2 w-full rounded-md ${mode === 'generate' ? 'bg-cyan-600 text-white' : 'text-slate-300'}`}>Generate</button>
-                <button onClick={() => setMode('edit')} className={`px-4 py-2 w-full rounded-md ${mode === 'edit' ? 'bg-cyan-600 text-white' : 'text-slate-300'}`}>Edit</button>
+        <div className="space-y-6 animate-fade-in">
+            {/* Mode selector */}
+            <div className="flex justify-center">
+                <div className="glass-dark rounded-xl p-1 border border-slate-600/30 shadow-glow-cyan">
+                    <button 
+                        onClick={() => setMode('generate')} 
+                        className={`px-6 py-3 w-full rounded-lg transition-all duration-300 ${
+                            mode === 'generate' 
+                                ? 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white shadow-lg transform scale-105' 
+                                : 'text-slate-300 hover:bg-slate-700/50'
+                        }`}
+                    >
+                        <span className="font-medium">Generate</span>
+                    </button>
+                    <button 
+                        onClick={() => setMode('edit')} 
+                        className={`px-6 py-3 w-full rounded-lg transition-all duration-300 ${
+                            mode === 'edit' 
+                                ? 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white shadow-lg transform scale-105' 
+                                : 'text-slate-300 hover:bg-slate-700/50'
+                        }`}
+                    >
+                        <span className="font-medium">Edit</span>
+                    </button>
+                </div>
             </div>
             
             <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">AI Model</label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2 mb-3">
+                    <span className="inline-block w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+                    <label className="text-sm font-medium text-slate-300">AI Model</label>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div 
                         onClick={() => {
                             setModelType('gpt4o');
                             preferences.setPreferredModel('gpt4o');
                         }}
-                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
                             modelType === 'gpt4o' 
-                                ? 'border-cyan-500 bg-slate-800' 
-                                : 'border-slate-700 bg-slate-900 hover:border-slate-600'
+                                ? 'border-cyan-500/50 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 shadow-lg shadow-cyan-500/20 transform scale-105' 
+                                : 'border-slate-700/50 bg-slate-800/50 hover:border-slate-600/50 hover:bg-slate-700/30'
                         }`}
                     >
-                        <div className="font-medium text-white">4O Image</div>
-                        <div className="text-xs text-slate-400 mt-1">Google's vision model</div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                                <span className="text-cyan-400 font-bold text-sm">G</span>
+                            </div>
+                            <div>
+                                <div className="font-medium text-white">4O Image</div>
+                                <div className="text-xs text-slate-400 mt-1">Google's vision model</div>
+                            </div>
+                        </div>
                     </div>
                     <div 
                         onClick={() => {
                             setModelType('seedream');
                             preferences.setPreferredModel('seedream');
                         }}
-                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
                             modelType === 'seedream' 
-                                ? 'border-cyan-500 bg-slate-800' 
-                                : 'border-slate-700 bg-slate-900 hover:border-slate-600'
+                                ? 'border-cyan-500/50 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 shadow-lg shadow-cyan-500/20 transform scale-105' 
+                                : 'border-slate-700/50 bg-slate-800/50 hover:border-slate-600/50 hover:bg-slate-700/30'
                         }`}
                     >
-                        <div className="font-medium text-white">Seedream 4.0</div>
-                        <div className="text-xs text-slate-400 mt-1">ByteDance's advanced model</div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                                <span className="text-purple-400 font-bold text-sm">S</span>
+                            </div>
+                            <div>
+                                <div className="font-medium text-white">Seedream 4.0</div>
+                                <div className="text-xs text-slate-400 mt-1">ByteDance's advanced model</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -141,7 +179,12 @@ export const ImageStudio: React.FC = () => {
                         </div>
                     )}
                     
-                    <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={mode === 'generate' ? "A majestic lion wearing a crown, photorealistic..." : "Add a vintage film filter..."} className="w-full h-24 p-4 bg-slate-900 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-cyan-500 transition-all" />
+                    <textarea 
+    value={prompt} 
+    onChange={(e) => setPrompt(e.target.value)} 
+    placeholder={mode === 'generate' ? "A majestic lion wearing a crown, photorealistic..." : "Add a vintage film filter..."} 
+    className="w-full h-24 p-4 bg-slate-900/50 backdrop-blur-sm border-2 border-slate-700/50 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all resize-none text-slate-200 placeholder-slate-500" 
+/>
 
                     {mode === 'generate' && (
                         <div>
@@ -159,9 +202,15 @@ export const ImageStudio: React.FC = () => {
                         </div>
                     )}
 
-                    <button onClick={handleSubmit} disabled={isLoading || !prompt.trim() || (mode === 'edit' && !sourceImage)} className="w-full flex items-center justify-center gap-3 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white font-bold py-3 px-4 rounded-lg transition-all">
-                        {isLoading ? <SpinnerIcon className="w-6 h-6" /> : <SparklesIcon className="w-6 h-6" />}
-                        {mode === 'generate' ? 'Generate Image' : 'Edit Image'}
+                    <button 
+                        onClick={handleSubmit} 
+                        disabled={isLoading || !prompt.trim() || (mode === 'edit' && !sourceImage)} 
+                        className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 disabled:from-slate-700 disabled:to-slate-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 shadow-lg shadow-cyan-500/30 disabled:shadow-none"
+                    >
+                        {isLoading ? 
+                            <><SpinnerIcon className="w-6 h-6 animate-spin" /> Processing...</> : 
+                            <><SparklesIcon className="w-6 h-6" /> {mode === 'generate' ? 'Generate Image' : 'Edit Image'}</>
+                        }
                     </button>
                 </div>
 

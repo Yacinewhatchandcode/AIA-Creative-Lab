@@ -38,16 +38,25 @@ export const PromptInput: React.FC<PromptInputProps> = ({ prompt, setPrompt, fil
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe your story here... A lone astronaut discovers a mysterious signal from an uncharted moon..."
-          className="w-full h-32 md:h-40 p-3 md:p-4 bg-slate-900 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-slate-200 resize-none text-sm md:text-base"
-          disabled={isLoading}
-        />
-        <div className="space-y-3">
+        <div className="md:col-span-2">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 rounded-2xl blur-xl"></div>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe your story here... A lone astronaut discovers a mysterious signal from an uncharted moon..."
+              className="relative w-full h-32 md:h-40 p-4 md:p-5 bg-slate-900/50 backdrop-blur-sm border-2 border-slate-700/50 rounded-2xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-slate-200 resize-none text-sm md:text-base placeholder-slate-500"
+              disabled={isLoading}
+            />
+            {/* Character count */}
+            <div className="absolute bottom-2 right-2 text-xs text-slate-500">
+              {prompt.length} / 1000
+            </div>
+          </div>
+        </div>
+        <div className="space-y-4 glass-dark rounded-2xl p-4 border border-slate-700/30">
             <div>
                 <div className="flex items-center justify-between">
                     <label htmlFor="num-chunks" className="block text-sm font-medium text-slate-300">
@@ -141,8 +150,8 @@ export const PromptInput: React.FC<PromptInputProps> = ({ prompt, setPrompt, fil
             </>
           ) : (
             <>
-              <SparklesIcon className="w-6 h-6" />
-              Generate Movie
+              <SparklesIcon className="w-6 h-6 animate-pulse" />
+              <span className="font-bold">Generate Movie</span>
             </>
           )}
         </button>

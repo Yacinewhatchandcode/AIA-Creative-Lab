@@ -16,53 +16,63 @@ const NavButton: React.FC<{
 }> = ({ isActive, onClick, icon: Icon, label }) => (
     <button
         onClick={onClick}
-        className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
             isActive
-                ? 'bg-cyan-600 text-white'
-                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                ? 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white shadow-lg shadow-cyan-500/30 transform scale-105'
+                : 'text-slate-300 hover:bg-slate-700 hover:text-white hover:scale-105'
         }`}
     >
-        <Icon className="w-5 h-5" />
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
         <span className="hidden sm:inline">{label}</span>
+        {/* Active indicator */}
+        {isActive && (
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-400 animate-pulse"></div>
+        )}
     </button>
 );
 
 export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => (
-    <header className="border-b-2 border-cyan-500/30 pb-4">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className='text-center sm:text-left'>
-                <h1 className="font-orbitron text-2xl sm:text-3xl font-black text-cyan-400 tracking-wider">
+    <header className="relative pb-6 animate-slide-up">
+        {/* Gradient underline */}
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50"></div>
+        
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
+            <div className="text-center sm:text-left">
+                <h1 className="font-orbitron text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 tracking-wider animate-gradient">
                     AI CREATIVE SUITE
                 </h1>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-2 text-sm text-slate-400 font-light">
                     A Multi-Modal Generation Platform
                 </p>
             </div>
-            <nav className="flex flex-wrap justify-center sm:justify-start sm:flex-nowrap gap-1 sm:space-x-2 p-1 bg-slate-900 rounded-lg border border-slate-700">
-                <NavButton
-                    isActive={activeTab === 'movie'}
-                    onClick={() => setActiveTab('movie')}
-                    icon={FilmIcon}
-                    label="Movie"
-                />
-                <NavButton
-                    isActive={activeTab === 'image'}
-                    onClick={() => setActiveTab('image')}
-                    icon={WandIcon}
-                    label="Image"
-                />
-                <NavButton
-                    isActive={activeTab === 'chat'}
-                    onClick={() => setActiveTab('chat')}
-                    icon={ChatBubbleIcon}
-                    label="Chat"
-                />
-                 <NavButton
-                    isActive={activeTab === 'live'}
-                    onClick={() => setActiveTab('live')}
-                    icon={MicrophoneIcon}
-                    label="Live"
-                />
+            
+            <nav className="glass-dark rounded-xl p-2 shadow-glow-cyan animate-fade-in">
+                <div className="flex flex-wrap justify-center sm:justify-start sm:flex-nowrap gap-1">
+                    <NavButton
+                        isActive={activeTab === 'movie'}
+                        onClick={() => setActiveTab('movie')}
+                        icon={FilmIcon}
+                        label="Movie"
+                    />
+                    <NavButton
+                        isActive={activeTab === 'image'}
+                        onClick={() => setActiveTab('image')}
+                        icon={WandIcon}
+                        label="Image"
+                    />
+                    <NavButton
+                        isActive={activeTab === 'chat'}
+                        onClick={() => setActiveTab('chat')}
+                        icon={ChatBubbleIcon}
+                        label="Chat"
+                    />
+                     <NavButton
+                        isActive={activeTab === 'live'}
+                        onClick={() => setActiveTab('live')}
+                        icon={MicrophoneIcon}
+                        label="Live"
+                    />
+                </div>
             </nav>
         </div>
     </header>

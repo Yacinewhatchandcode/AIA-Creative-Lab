@@ -75,29 +75,68 @@ export const Chatbot: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-[70vh] bg-slate-900 border border-slate-700 rounded-lg">
+        <div className="flex flex-col h-[70vh] glass-dark rounded-2xl border border-slate-700/50 shadow-glow-cyan animate-fade-in">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-700/30">
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-cyan-400 rounded-full animate-pulse blur-md"></div>
+                        <div className="relative w-3 h-3 bg-cyan-400 rounded-full"></div>
+                    </div>
+                    <h3 className="font-orbitron text-xl font-semibold text-cyan-400">AI Assistant</h3>
+                    <div className="flex-1"></div>
+                    <div className="px-3 py-1 bg-cyan-500/20 rounded-full text-xs text-cyan-300 border border-cyan-500/30">
+                        Online
+                    </div>
+                </div>
+            </div>
+            
+            {/* Messages */}
             <div className="flex-1 p-4 space-y-4 overflow-y-auto">
                 {messages.map((msg, index) => (
-                    <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg ${msg.sender === 'user' ? 'bg-cyan-700' : 'bg-slate-800'}`}>
-                            <p className="whitespace-pre-wrap">{msg.text}{msg.sender === 'ai' && isLoading && index === messages.length - 1 ? '...' : ''}</p>
+                    <div key={index} className={`flex animate-slide-up ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`relative max-w-xs md:max-w-md lg:max-w-lg p-4 rounded-2xl transition-all duration-300 ${
+                            msg.sender === 'user' 
+                                ? 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white shadow-lg shadow-cyan-500/20' 
+                                : 'bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 text-slate-200'
+                        }`}>
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                                {msg.text}
+                                {msg.sender === 'ai' && isLoading && index === messages.length - 1 && (
+                                    <span className="inline-flex ml-1">
+                                        <span className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse"></span>
+                                        <span className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse ml-1" style={{animationDelay: '0.2s'}}></span>
+                                        <span className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse ml-1" style={{animationDelay: '0.4s'}}></span>
+                                    </span>
+                                )}
+                            </p>
+                            {/* Message timestamp */}
+                            <div className="mt-1 text-xs opacity-70">
+                                {msg.sender === 'user' ? 'You' : 'AI'}
+                            </div>
                         </div>
                     </div>
                 ))}
                 <div ref={messagesEndRef} />
             </div>
-            <div className="p-4 border-t border-slate-700">
-                <div className="flex items-center space-x-2">
+            
+            {/* Input */}
+            <div className="p-4 border-t border-slate-700/30">
+                <div className="flex items-center gap-3">
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Type your message here..."
-                        className="w-full p-3 bg-slate-800 border-2 border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                        placeholder="Send a message..."
+                        className="flex-1 p-4 bg-slate-900/50 backdrop-blur-sm border-2 border-slate-700/50 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all placeholder-slate-500"
                         disabled={isLoading}
                     />
-                    <button onClick={handleSendMessage} disabled={isLoading || !input.trim()} className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white font-bold p-3 rounded-lg">
+                    <button 
+                        onClick={handleSendMessage} 
+                        disabled={isLoading || !input.trim()} 
+                        className="bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 disabled:from-slate-700 disabled:to-slate-600 text-white p-4 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 shadow-lg shadow-cyan-500/30 disabled:shadow-none"
+                    >
                         <SparklesIcon className="w-6 h-6" />
                     </button>
                 </div>

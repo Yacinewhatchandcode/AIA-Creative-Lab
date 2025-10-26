@@ -92,7 +92,7 @@ export const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onApiKeyError })
   const isLoading = jobStatus === JobStatus.RUNNING;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Hidden elements for processing, used by the backend service */}
       <video ref={frameExtractionVideoRef} muted playsInline crossOrigin="anonymous" style={{ display: 'none' }} />
       <canvas ref={frameExtractionCanvasRef} style={{ display: 'none' }} />
@@ -100,28 +100,57 @@ export const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onApiKeyError })
       <canvas ref={concatenationCanvasRef} style={{ display: 'none' }} />
       
       {finalVideoUrl ? (
-        <VideoPlayer src={finalVideoUrl} onReset={() => {
-          resetState();
-          setPrompt('');
-          setUploadedFile(null);
-        }} />
+        <div className="animate-fade-in">
+          <VideoPlayer src={finalVideoUrl} onReset={() => {
+            resetState();
+            setPrompt('');
+            setUploadedFile(null);
+          }} />
+        </div>
       ) : (
-        <PromptInput
-          prompt={prompt}
-          setPrompt={setPrompt}
-          file={uploadedFile}
-          setFile={setUploadedFile}
-          onGenerate={handleGenerate}
-          isLoading={isLoading}
-          numChunks={numChunks}
-          setNumChunks={setNumChunks}
-          isAutoMode={isAutoMode}
-          setIsAutoMode={setIsAutoMode}
-        />
-      )}
-
-      {(isLoading || error) && (
-        <StatusDisplay steps={pipelineSteps} error={error} currentTask={currentTask} />
+        <div className="space-y-8 animate-slide-up">
+          {/* Hero Section */}
+          <div className="text-center mb-12 relative glass-dark rounded-2xl p-8 border border-cyan-500/20 shadow-glow-cyan">
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 blur-3xl rounded-2xl"></div>
+            <h2 className="font-orbitron text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 mb-4 relative animate-gradient">
+              Cinematic Universe Generator
+            </h2>
+            <p className="text-slate-300 text-lg max-w-3xl mx-auto relative">
+              Transform your ideas into stunning cinematic experiences with AI-powered video generation powered by Veo3.1
+            </p>
+            {/* Feature badges */}
+            <div className="flex flex-wrap justify-center gap-3 mt-6 relative">
+              <span className="px-3 py-1 bg-cyan-500/20 text-cyan-300 rounded-full text-xs font-medium border border-cyan-500/30">
+                Powered by Veo3.1
+              </span>
+              <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs font-medium border border-purple-500/30">
+                Autonomous Frame Generation
+              </span>
+              <span className="px-3 py-1 bg-pink-500/20 text-pink-300 rounded-full text-xs font-medium border border-pink-500/30">
+                Real-time Processing
+              </span>
+            </div>
+          </div>
+          
+          <PromptInput
+            prompt={prompt}
+            setPrompt={setPrompt}
+            file={uploadedFile}
+            setFile={setUploadedFile}
+            onGenerate={handleGenerate}
+            isLoading={isLoading}
+            numChunks={numChunks}
+            setNumChunks={setNumChunks}
+            isAutoMode={isAutoMode}
+            setIsAutoMode={setIsAutoMode}
+          />
+          
+          {(isLoading || error) && (
+            <div className="animate-slide-up">
+              <StatusDisplay steps={pipelineSteps} error={error} currentTask={currentTask} />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
