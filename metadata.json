@@ -1,0 +1,7 @@
+{
+  "name": "AI Creative Suite",
+  "description": "An advanced, multi-modal AI suite featuring a movie generator, image studio, AI chatbot, and live voice conversations powered by the Google Gemini API.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
