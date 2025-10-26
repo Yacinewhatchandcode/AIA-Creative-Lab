@@ -36,7 +36,10 @@ const KIE_MAIN_API = 'https://api.kie.ai/api/v1';
 
 const getKieApiKey = (): string => {
   if (!process.env.KIE_API_KEY) {
-    throw new Error("KIE_API_KEY environment variable not set.");
+    throw new Error("KIE_API_KEY environment variable not set. Please configure your API key in the .env file.");
+  }
+  if (process.env.KIE_API_KEY.length < 10) {
+    throw new Error("Invalid KIE_API_KEY format. Please check your API key.");
   }
   return process.env.KIE_API_KEY;
 };
@@ -95,38 +98,54 @@ export const generateImage = async (prompt: string, aspectRatio: string): Promis
       body: JSON.stringify(requestPayload),
     });
   } catch (cloudflareError) {
-    console.log('Cloudflare R2 not available for 4o-image, trying direct API');
+    console.info('Cloudflare R2 not available for 4o-image, trying direct API');
   }
 
   // Fallback to direct KIE API if Cloudflare fails
   if (!response || !response.ok) {
-    response = await fetch(`${KIE_MAIN_API}/api/v1/4o-image/generate`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getKieApiKey()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestPayload),
-    });
+    try {
+      response = await fetch(`${KIE_MAIN_API}/api/v1/4o-image/generate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getKieApiKey()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
+      });
+    } catch (directApiError) {
+      throw new Error(`Failed to connect to KIE API: ${directApiError instanceof Error ? directApiError.message : 'Network error'}`);
+    }
   }
 
-  const response2 = await fetch(kieApiUrl, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getKieApiKey()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestPayload),
-  });
-
-  if (!response2.ok) {
-    throw new Error(`Failed to generate image: ${response2.statusText}`);
+  if (!response.ok) {
+    throw new Error(`Failed to generate image: ${response.statusText}`);
   }
 
-  const result: KieImageResponse = await response2.json();
+  const result: KieImageResponse = await response.json();
   
   if (result.code !== 200) {
-    throw new Error(`Image generation request failed: ${result.msg}`);
+    let errorMessage = `Image generation request failed: ${result.msg}`;
+    
+    // Add specific guidance based on error codes
+    switch (result.code) {
+      case 400:
+        errorMessage += " Please check your prompt and try again.";
+        break;
+      case 401:
+        errorMessage += " Please verify your API key is correct.";
+        break;
+      case 402:
+        errorMessage += " Insufficient credits in your account. Please top up your balance.";
+        break;
+      case 429:
+        errorMessage += " Too many requests. Please wait and try again later.";
+        break;
+      case 500:
+        errorMessage += " Server error. Please try again in a few minutes.";
+        break;
+    }
+    
+    throw new Error(errorMessage);
   }
 
   const taskId = result.data.taskId;

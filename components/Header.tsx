@@ -38,30 +38,30 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => (
                     A Multi-Modal Generation Platform
                 </p>
             </div>
-            <nav className="flex space-x-2 p-1 bg-slate-900 rounded-lg border border-slate-700">
+            <nav className="flex flex-wrap justify-center sm:justify-start sm:flex-nowrap gap-1 sm:space-x-2 p-1 bg-slate-900 rounded-lg border border-slate-700">
                 <NavButton
                     isActive={activeTab === 'movie'}
                     onClick={() => setActiveTab('movie')}
                     icon={FilmIcon}
-                    label="Movie Generator"
+                    label="Movie"
                 />
                 <NavButton
                     isActive={activeTab === 'image'}
                     onClick={() => setActiveTab('image')}
                     icon={WandIcon}
-                    label="Image Studio"
+                    label="Image"
                 />
                 <NavButton
                     isActive={activeTab === 'chat'}
                     onClick={() => setActiveTab('chat')}
                     icon={ChatBubbleIcon}
-                    label="AI Chatbot"
+                    label="Chat"
                 />
                  <NavButton
                     isActive={activeTab === 'live'}
                     onClick={() => setActiveTab('live')}
                     icon={MicrophoneIcon}
-                    label="Live Chat"
+                    label="Live"
                 />
             </nav>
         </div>

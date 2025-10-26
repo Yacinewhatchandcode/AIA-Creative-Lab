@@ -1,5 +1,6 @@
 import React from 'react';
 import { SparklesIcon } from './icons';
+import { preferences } from '../utils/preferences';
 
 interface PromptInputProps {
   prompt: string;
@@ -30,18 +31,20 @@ export const PromptInput: React.FC<PromptInputProps> = ({ prompt, setPrompt, fil
   const handleNumChunksChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
     if (!isNaN(value)) {
-        setNumChunks(Math.max(1, Math.min(10, value)));
+        const newValue = Math.max(1, Math.min(10, value));
+        setNumChunks(newValue);
+        preferences.setDefaultSceneCount(newValue);
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Describe your story here... A lone astronaut discovers a mysterious signal from an uncharted moon..."
-          className="md:col-span-2 w-full h-40 p-4 bg-slate-900 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-slate-200 resize-none"
+          className="w-full h-32 md:h-40 p-3 md:p-4 bg-slate-900 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-slate-200 resize-none text-sm md:text-base"
           disabled={isLoading}
         />
         <div className="space-y-3">
@@ -56,7 +59,10 @@ export const PromptInput: React.FC<PromptInputProps> = ({ prompt, setPrompt, fil
                             name="auto-mode"
                             type="checkbox"
                             checked={isAutoMode}
-                            onChange={(e) => setIsAutoMode(e.target.checked)}
+                            onChange={(e) => {
+    setIsAutoMode(e.target.checked);
+    preferences.setAutoMode(e.target.checked);
+}}
                             className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-600"
                             disabled={isLoading}
                         />
@@ -123,7 +129,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({ prompt, setPrompt, fil
         <button
           onClick={onGenerate}
           disabled={isLoading || !prompt.trim()}
-          className="w-full flex items-center justify-center gap-3 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:scale-100 shadow-lg shadow-cyan-900/50 disabled:shadow-none"
+          className="w-full sm:w-auto flex items-center justify-center gap-3 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold py-3 px-6 sm:px-8 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:scale-100 shadow-lg shadow-cyan-900/50 disabled:shadow-none text-base sm:text-lg"
         >
           {isLoading ? (
             <>

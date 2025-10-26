@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { PromptInput } from './PromptInput';
 import { StatusDisplay } from './StatusDisplay';
 import { VideoPlayer } from './VideoPlayer';
@@ -6,12 +6,22 @@ import { runMovieGenerationPipeline } from '../services/backendService';
 import type { AgentStep } from '../types';
 import { JobStatus } from '../types';
 import { PIPELINE_AGENTS } from '../constants';
+import { preferences } from '../utils/preferences';
 
 interface MovieGeneratorProps {
   onApiKeyError: () => void;
 }
 
 export const MovieGenerator: React.FC<MovieGeneratorProps> = ({ onApiKeyError }) => {
+  // Load preferences on mount
+  useEffect(() => {
+    const savedSceneCount = preferences.getDefaultSceneCount();
+    const savedAutoMode = preferences.isAutoMode();
+    
+    setNumChunks(savedSceneCount);
+    setIsAutoMode(savedAutoMode);
+  }, []);
+
   const [prompt, setPrompt] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus>(JobStatus.IDLE);

@@ -1,13 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateImage, editImage } from '../services/imageService';
 import { generateImageWithSeedream, editImageWithSeedream } from '../services/seedreamService';
 import { SparklesIcon, SpinnerIcon } from './icons';
+import { preferences } from '../utils/preferences';
 
 type StudioMode = 'generate' | 'edit';
 type ImageModel = 'gpt4o' | 'seedream';
 
 // Fix: Export the component to make it accessible to other modules.
 export const ImageStudio: React.FC = () => {
+    // Load preferences on mount
+    useEffect(() => {
+        const savedModel = preferences.getPreferredModel();
+        const savedAspectRatio = preferences.getDefaultAspectRatio();
+        
+        setModelType(savedModel);
+        setAspectRatio(savedAspectRatio);
+    }, []);
+
     const [mode, setMode] = useState<StudioMode>('generate');
     const [modelType, setModelType] = useState<ImageModel>('gpt4o');
     const [prompt, setPrompt] = useState('');
@@ -77,7 +87,10 @@ export const ImageStudio: React.FC = () => {
                 <label className="block text-sm font-medium text-slate-300 mb-2">AI Model</label>
                 <div className="grid grid-cols-2 gap-4">
                     <div 
-                        onClick={() => setModelType('gpt4o')}
+                        onClick={() => {
+                            setModelType('gpt4o');
+                            preferences.setPreferredModel('gpt4o');
+                        }}
                         className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                             modelType === 'gpt4o' 
                                 ? 'border-cyan-500 bg-slate-800' 
@@ -88,7 +101,10 @@ export const ImageStudio: React.FC = () => {
                         <div className="text-xs text-slate-400 mt-1">Google's vision model</div>
                     </div>
                     <div 
-                        onClick={() => setModelType('seedream')}
+                        onClick={() => {
+                            setModelType('seedream');
+                            preferences.setPreferredModel('seedream');
+                        }}
                         className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                             modelType === 'seedream' 
                                 ? 'border-cyan-500 bg-slate-800' 
@@ -130,7 +146,10 @@ export const ImageStudio: React.FC = () => {
                     {mode === 'generate' && (
                         <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">Aspect Ratio</label>
-                            <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="w-full p-3 bg-slate-900 border-2 border-slate-700 rounded-lg">
+                            <select value={aspectRatio} onChange={(e) => {
+    setAspectRatio(e.target.value);
+    preferences.setDefaultAspectRatio(e.target.value);
+}} className="w-full p-3 bg-slate-900 border-2 border-slate-700 rounded-lg">
                                 <option value="1:1">Square (1:1)</option>
                                 <option value="16:9">Landscape (16:9)</option>
                                 <option value="9:16">Portrait (9:16)</option>

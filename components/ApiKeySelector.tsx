@@ -128,10 +128,10 @@ export const ApiKeySelector: React.FC<ApiKeySelectorProps> = ({ onKeySelected })
   };
 
   return (
-    <div className="mt-12 flex flex-col items-center text-center bg-slate-900 p-8 rounded-lg border border-slate-700">
-      <h2 className="text-2xl font-bold font-orbitron text-cyan-400">KIE API Status</h2>
+    <div className="mt-8 sm:mt-12 flex flex-col items-center text-center bg-slate-900 p-6 sm:p-8 rounded-lg border border-slate-700">
+      <h2 className="text-xl sm:text-2xl font-bold font-orbitron text-cyan-400">KIE API Status</h2>
       
-      <div className="mt-6 bg-slate-800 rounded-lg p-6 w-full max-w-md">
+      <div className="mt-4 sm:mt-6 bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-md">
         <div className="flex items-center justify-between mb-4">
           <span className="text-slate-300">API Key:</span>
           <span className={`flex items-center gap-2 ${getStatusColor()}`}>
