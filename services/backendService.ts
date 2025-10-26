@@ -1,4 +1,7 @@
-import { decideSceneCount, planStory, generateVideoChunk } from './geminiService';
+import { decideSceneCount, planStory } from './storyPlannerService';
+import { generateVideoChunkWithKie } from './kieService';
+import { autonomousFrameAgent } from './autonomousFrameAgent';
+import { generateSceneAudioPackage } from './audioService';
 import { fileToBase64 } from '../utils/imageUtils';
 import type { AgentStep } from '../types';
 import { PipelineStatus } from '../types';
@@ -22,8 +25,6 @@ interface RunParams {
 }
 
 // --- Helper Functions ---
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const extractLastFrame = (videoUrl: string, refs: Refs): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -129,7 +130,6 @@ export const runMovieGenerationPipeline = async (params: RunParams) => {
 
     // Agent 1: Orchestrator
     updateStepStatus(agentIndex, PipelineStatus.IN_PROGRESS, "Initializing system...");
-    await sleep(1000); // Simulate init
     let effectiveNumChunks = numChunks;
     if (isAutoMode) {
       onProgress({ currentTask: "Auto-planning: AI is deciding movie length..." });
@@ -139,49 +139,102 @@ export const runMovieGenerationPipeline = async (params: RunParams) => {
     updateStepStatus(agentIndex, PipelineStatus.COMPLETED);
     agentIndex++;
 
-    // Agent 2: Story Planner
-    updateStepStatus(agentIndex, PipelineStatus.IN_PROGRESS, "Planning the story...");
-    const storyPrompts = await planStory(prompt, effectiveNumChunks);
-     if (storyPrompts.length !== effectiveNumChunks) {
-        throw new Error(`Story planner returned ${storyPrompts.length} prompts, expected ${effectiveNumChunks}.`);
-     }
+    // Agent 2: Story Analysis (integrated into Autonomous Agent)
+    updateStepStatus(agentIndex, PipelineStatus.IN_PROGRESS, "Analyzing content structure...");
+    // Story planning is now handled autonomously based on user input type
     updateStepStatus(agentIndex, PipelineStatus.COMPLETED);
     agentIndex++;
 
-    // Agent 3: Scene Setup (Simulated)
+    // Agent 3: Scene Setup
     updateStepStatus(agentIndex, PipelineStatus.IN_PROGRESS, "Preparing visual assets...");
     let lastFrameDataUrl: string | undefined = undefined;
     if (file) {
       onProgress({ currentTask: `Processing initial image...` });
       lastFrameDataUrl = await fileToBase64(file);
     }
-    await sleep(1000); // Simulate asset prep
     updateStepStatus(agentIndex, PipelineStatus.COMPLETED);
     agentIndex++;
 
-    // Agent 4: VEO Generation
+    // Agent 4: Autonomous Frame Enhancement & Parallel Video Generation
     updateStepStatus(agentIndex, PipelineStatus.IN_PROGRESS);
-    const generatedChunkUrls: string[] = [];
-    for (let i = 0; i < effectiveNumChunks; i++) {
-        updateStepStatus(agentIndex, PipelineStatus.IN_PROGRESS, `Generating Scene ${i + 1} of ${effectiveNumChunks}...`);
-        
-        const videoUrlWithKey = await generateVideoChunk(storyPrompts[i], lastFrameDataUrl);
-        const videoBlob = await fetch(videoUrlWithKey).then(res => res.blob());
-        const localObjectUrl = URL.createObjectURL(videoBlob);
-        
-        generatedChunkUrls.push(localObjectUrl);
-        
-        if (i < effectiveNumChunks - 1) {
-            updateStepStatus(agentIndex, PipelineStatus.IN_PROGRESS, `Extracting final frame from Scene ${i + 1}...`);
-            lastFrameDataUrl = await extractLastFrame(localObjectUrl, refs);
-        }
+    
+    onProgress({ currentTask: "Autonomous agent: analyzing input and preparing pipeline..." });
+    
+    // Stage 1: Frame Enhancement with Seedream (handles both script and idea mode)
+    let frameUpdateCount = 0;
+    const { enhancedFrames, videoPromises, mode, tasks: sceneTasks } = await autonomousFrameAgent.orchestrateFrameEnhancement(
+      prompt, // Pass original prompt instead of storyPrompts
+      lastFrameDataUrl,
+      (update) => {
+        frameUpdateCount++;
+        onProgress({ 
+          currentTask: `Autonomous agent: ${update.stage} (Scene ${update.scene})${update.details ? ` - ${update.details}` : ''}` 
+        });
+      }
+    );
+    
+    // Update effective chunks if different from initial estimation
+    if (mode === 'script' && enhancedFrames.length !== effectiveNumChunks) {
+      onProgress({ numChunks: enhancedFrames.length });
+      effectiveNumChunks = enhancedFrames.length;
     }
+    
+    updateStepStatus(agentIndex, PipelineStatus.IN_PROGRESS, "Parallel video generation in progress...");
+    
+    // Stage 2: Parallel Video Generation
+    let videoUpdateCount = 0;
+    const generatedVideoUrls = await autonomousFrameAgent.executeParallelGeneration(
+      videoPromises,
+      (update) => {
+        videoUpdateCount++;
+        onProgress({ 
+          currentTask: `Parallel generation: ${update.details} (${update.completed}/${update.total} videos)` 
+        });
+      }
+    );
+    
+    // Convert to blob URLs
+    const generatedChunkUrls: string[] = [];
+    for (let i = 0; i < generatedVideoUrls.length; i++) {
+      const videoUrlWithKey = generatedVideoUrls[i];
+      const videoBlob = await fetch(videoUrlWithKey).then(res => res.blob());
+      const localObjectUrl = URL.createObjectURL(videoBlob);
+      generatedChunkUrls.push(localObjectUrl);
+    }
+    
     updateStepStatus(agentIndex, PipelineStatus.COMPLETED);
     agentIndex++;
 
-    // Agent 5: Audio Synthesis (Simulated)
-    updateStepStatus(agentIndex, PipelineStatus.IN_PROGRESS, "Composing soundtrack and voiceover...");
-    await sleep(3000); // Simulate audio work
+    // Agent 5: Real Audio Synthesis
+    updateStepStatus(agentIndex, PipelineStatus.IN_PROGRESS, "Generating custom soundtrack...");
+    
+    const audioUrls: string[] = [];
+    
+    // Extract dialog from enhanced frames if any
+    for (let i = 0; i < sceneTasks.length; i++) {
+      const task = sceneTasks[i];
+      const scenePrompt = task.prompt;
+      const sceneDialog = task.dialog;
+      
+      onProgress({ currentTask: `Creating audio for Scene ${i + 1}...` });
+      
+      try {
+        const audioUrl = await generateSceneAudioPackage(
+          scenePrompt,
+          sceneDialog,
+          i,
+          sceneTasks.length,
+          (update) => {
+            onProgress({ currentTask: `Scene ${i + 1} - ${update.stage}${update.details ? `: ${update.details}` : ''}` });
+          }
+        );
+        audioUrls.push(audioUrl);
+      } catch (audioError) {
+        console.warn(`Audio generation failed for scene ${i + 1}:`, audioError);
+        // Continue without audio for this scene
+      }
+    }
+    
     updateStepStatus(agentIndex, PipelineStatus.COMPLETED);
     agentIndex++;
 

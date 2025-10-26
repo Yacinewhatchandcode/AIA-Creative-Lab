@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { LiveSession } from '@google/genai';
-import { startLiveSession, closeLiveSession } from '../services/liveService';
+import { realChatService, ChatSession } from '../services/realChatService';
 import { MicrophoneIcon, SpinnerIcon } from './icons';
 
 interface TranscriptEntry {
     speaker: 'You' | 'AI';
     text: string;
+    timestamp: number;
 }
 
 export const LiveChat: React.FC = () => {
@@ -13,11 +13,12 @@ export const LiveChat: React.FC = () => {
     const [isActive, setIsActive] = useState(false);
     const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [isRecording, setIsRecording] = useState(false);
 
-    const sessionRef = useRef<LiveSession | null>(null);
-    const audioContextRef = useRef<AudioContext | null>(null);
+    const chatSessionRef = useRef<ChatSession | null>(null);
     const mediaStreamRef = useRef<MediaStream | null>(null);
-    const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+    const recognitionRef = useRef<any>(null);
+    const synthesisRef = useRef<SpeechSynthesis | null>(null);
     const transcriptEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -32,9 +33,13 @@ export const LiveChat: React.FC = () => {
                 const newTranscript = [...prev];
                 const lastEntry = newTranscript[newTranscript.length - 1];
                 if (lastEntry && lastEntry.speaker === update.speaker) {
-                    lastEntry.text = update.transcript;
+                    lastEntry.text += update.transcript;
                 } else {
-                    newTranscript.push({ speaker: update.speaker, text: update.transcript });
+                    newTranscript.push({ 
+                        speaker: update.speaker, 
+                        text: update.transcript,
+                        timestamp: Date.now()
+                    });
                 }
                 return newTranscript;
             });
@@ -51,17 +56,82 @@ export const LiveChat: React.FC = () => {
         setTranscript([]);
 
         try {
-            const { session, audioContext, mediaStream, scriptProcessor } = await startLiveSession(handleProgress);
-            sessionRef.current = session;
-            audioContextRef.current = audioContext;
-            mediaStreamRef.current = mediaStream;
-            scriptProcessorRef.current = scriptProcessor;
+            // Initialize chat session
+            const session = realChatService.startChat();
+            chatSessionRef.current = session;
+            
+            // Initialize Web Speech API
+            recognitionRef.current = new (window as any).webkitSpeechRecognition() || new (window as any).SpeechRecognition();
+            const recognition = recognitionRef.current;
+            
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+            
+            recognition.onresult = (event: any) => {
+                const current = event.resultIndex;
+                const transcript = event.results[current][0].transcript;
+                
+                if (event.results[current].isFinal) {
+                    setTranscript(prev => [...prev, { 
+                        speaker: 'You', 
+                        text: transcript,
+                        timestamp: Date.now()
+                    }]);
+                    
+                    // Send to AI for response
+                    handleUserMessage(transcript);
+                }
+            };
+            
+            recognition.onerror = (event: any) => {
+                setError(`Speech recognition error: ${event.error}`);
+                stopConversation();
+            };
+            
+            synthesisRef.current = window.speechSynthesis;
+            
+            // Start recognition
+            recognition.start();
+            setIsRecording(true);
             setIsActive(true);
-            setTranscript([{ speaker: 'AI', text: "Hello! I'm listening..." }]);
+            
+            setTranscript([{ 
+                speaker: 'AI', 
+                text: "Hello! I'm listening... Speak freely and I'll respond in real-time.",
+                timestamp: Date.now()
+            }]);
+            
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to start the session.');
+            setError(`Speech recognition not available in this browser: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setIsConnecting(false);
+        }
+    };
+    
+    const handleUserMessage = async (transcript: string) => {
+        if (!chatSessionRef.current) return;
+        
+        try {
+            const aiResponse = await chatSessionRef.current.sendMessage(transcript);
+            
+            // Convert text to speech
+            const utterance = new SpeechSynthesisUtterance(aiResponse);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            utterance.onstart = () => {
+                setTranscript(prev => [...prev, { 
+                    speaker: 'AI', 
+                    text: aiResponse,
+                    timestamp: Date.now()
+                }]);
+            };
+            
+            synthesisRef.current?.speak(utterance);
+        } catch (error) {
+            setError(`AI response failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
 

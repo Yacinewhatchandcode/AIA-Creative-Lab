@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { generateImage, editImage } from '../services/geminiService';
+import { generateImage, editImage } from '../services/imageService';
+import { generateImageWithSeedream, editImageWithSeedream } from '../services/seedreamService';
 import { SparklesIcon, SpinnerIcon } from './icons';
 
 type StudioMode = 'generate' | 'edit';
+type ImageModel = 'gpt4o' | 'seedream';
 
 // Fix: Export the component to make it accessible to other modules.
 export const ImageStudio: React.FC = () => {
     const [mode, setMode] = useState<StudioMode>('generate');
+    const [modelType, setModelType] = useState<ImageModel>('gpt4o');
     const [prompt, setPrompt] = useState('');
     const [aspectRatio, setAspectRatio] = useState('1:1');
     const [sourceImage, setSourceImage] = useState<File | null>(null);
@@ -30,7 +33,9 @@ export const ImageStudio: React.FC = () => {
         setError(null);
         setResultImage(null);
         try {
-            const imageUrl = await generateImage(prompt, aspectRatio);
+            const imageUrl = modelType === 'seedream' 
+                ? await generateImageWithSeedream(prompt, aspectRatio)
+                : await generateImage(prompt, aspectRatio);
             setResultImage(imageUrl);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'An unknown error occurred.');
@@ -45,7 +50,9 @@ export const ImageStudio: React.FC = () => {
         setError(null);
         setResultImage(null);
         try {
-            const imageUrl = await editImage(prompt, sourceImage);
+            const imageUrl = modelType === 'seedream'
+                ? await editImageWithSeedream(prompt, sourceImage)
+                : await editImage(prompt, sourceImage);
             setResultImage(imageUrl);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'An unknown error occurred.');
@@ -64,6 +71,34 @@ export const ImageStudio: React.FC = () => {
             <div className="flex justify-center p-1 bg-slate-800 border border-slate-700 rounded-lg">
                 <button onClick={() => setMode('generate')} className={`px-4 py-2 w-full rounded-md ${mode === 'generate' ? 'bg-cyan-600 text-white' : 'text-slate-300'}`}>Generate</button>
                 <button onClick={() => setMode('edit')} className={`px-4 py-2 w-full rounded-md ${mode === 'edit' ? 'bg-cyan-600 text-white' : 'text-slate-300'}`}>Edit</button>
+            </div>
+            
+            <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">AI Model</label>
+                <div className="grid grid-cols-2 gap-4">
+                    <div 
+                        onClick={() => setModelType('gpt4o')}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                            modelType === 'gpt4o' 
+                                ? 'border-cyan-500 bg-slate-800' 
+                                : 'border-slate-700 bg-slate-900 hover:border-slate-600'
+                        }`}
+                    >
+                        <div className="font-medium text-white">4O Image</div>
+                        <div className="text-xs text-slate-400 mt-1">Google's vision model</div>
+                    </div>
+                    <div 
+                        onClick={() => setModelType('seedream')}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                            modelType === 'seedream' 
+                                ? 'border-cyan-500 bg-slate-800' 
+                                : 'border-slate-700 bg-slate-900 hover:border-slate-600'
+                        }`}
+                    >
+                        <div className="font-medium text-white">Seedream 4.0</div>
+                        <div className="text-xs text-slate-400 mt-1">ByteDance's advanced model</div>
+                    </div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">

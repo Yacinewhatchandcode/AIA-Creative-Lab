@@ -16,8 +16,8 @@ export const PIPELINE_AGENTS: AgentStep[] = [
     icon: ShieldCheckIcon,
   },
   {
-    name: 'Story Planning Agent',
-    description: 'Breaking down the narrative into sequential scenes.',
+    name: 'Story Analysis Agent',
+    description: 'Analyzing input to determine optimal processing approach.',
     status: PipelineStatus.PENDING,
     icon: PencilIcon,
   },
@@ -28,14 +28,14 @@ export const PIPELINE_AGENTS: AgentStep[] = [
     icon: SparklesIcon,
   },
   {
-    name: 'VEO Generation Agent',
-    description: 'Generating video chunks with frame-to-frame continuity.',
+    name: 'Autonomous Frame Agent',
+    description: 'Enhancing frames with Seedream AI and generating parallel video chunks.',
     status: PipelineStatus.PENDING,
     icon: FilmIcon,
   },
   {
     name: 'Audio Synthesis Agent',
-    description: 'Composing musical score and generating character voiceovers.',
+    description: 'Generating custom music and voiceovers using Suno AI.',
     status: PipelineStatus.PENDING,
     icon: AudioWaveIcon,
   },

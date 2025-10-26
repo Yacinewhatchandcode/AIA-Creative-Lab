@@ -4,11 +4,11 @@ import { fileToBase64 } from "../utils/imageUtils";
 let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = (): GoogleGenAI => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable not set.");
+    if (!process.env.GOOGLE_API_KEY) {
+        throw new Error("GOOGLE_API_KEY environment variable not set.");
     }
     if (!aiClient) {
-        aiClient = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        aiClient = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
     }
     return aiClient;
 }
@@ -71,7 +71,7 @@ export const planStory = async (prompt: string, numChunks: number): Promise<stri
 export const generateVideoChunk = async (prompt: string, imageBase64Data?: string): Promise<string> => {
     const ai = getAiClient();
     const requestPayload: any = {
-        model: 'veo-3.1-fast-generate-preview',
+        model: 'veo3_fast',
         prompt: prompt,
         config: {
             numberOfVideos: 1,

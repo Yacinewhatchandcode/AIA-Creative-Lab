@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { startChat } from '../services/geminiService';
-import type { Chat } from '@google/genai';
+import { realChatService, ChatSession } from '../services/realChatService';
 import { SparklesIcon } from './icons';
 
 interface Message {
@@ -9,15 +8,22 @@ interface Message {
 }
 
 export const Chatbot: React.FC = () => {
-    const [chat, setChat] = useState<Chat | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatSessionRef = useRef<ChatSession | null>(null);
 
     useEffect(() => {
-        setChat(startChat());
-        setMessages([{ sender: 'ai', text: "Hello! How can I help you create something amazing today?" }]);
+        // Initialize real chat session
+        const session = realChatService.startChat();
+        chatSessionRef.current = session;
+        const history = session.getHistory();
+        
+        setMessages(history.map(msg => ({
+            sender: msg.role as 'user' | 'ai',
+            text: msg.content
+        })));
     }, []);
 
     const scrollToBottom = () => {
@@ -27,10 +33,11 @@ export const Chatbot: React.FC = () => {
     useEffect(scrollToBottom, [messages]);
 
     const handleSendMessage = async () => {
-        if (!input.trim() || isLoading || !chat) return;
+        if (!input.trim() || isLoading || !chatSessionRef.current) return;
 
         const userMessage: Message = { sender: 'user', text: input };
         setMessages(prev => [...prev, userMessage]);
+        const currentInput = input;
         setInput('');
         setIsLoading(true);
 
@@ -38,21 +45,28 @@ export const Chatbot: React.FC = () => {
         setMessages(prev => [...prev, { sender: 'ai', text: '' }]);
 
         try {
-            const responseStream = await chat.sendMessageStream({ message: input });
-            let responseText = '';
-            for await (const chunk of responseStream) {
-                responseText += chunk.text;
-                setMessages(prev => {
-                    const newMessages = [...prev];
-                    newMessages[newMessages.length - 1] = { sender: 'ai', text: responseText };
-                    return newMessages;
-                });
-            }
+            const responseText = await chatSessionRef.current.sendMessageStream(
+                currentInput,
+                (chunk) => {
+                    setMessages(prev => {
+                        const newMessages = [...prev];
+                        const lastMessage = newMessages[newMessages.length - 1];
+                        newMessages[newMessages.length - 1] = { 
+                            sender: 'ai', 
+                            text: lastMessage.text + chunk
+                        };
+                        return newMessages;
+                    });
+                }
+            );
         } catch (error) {
             console.error(error);
-             setMessages(prev => {
+            setMessages(prev => {
                 const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = { sender: 'ai', text: 'Sorry, I encountered an error. Please try again.' };
+                newMessages[newMessages.length - 1] = { 
+                    sender: 'ai', 
+                    text: 'Sorry, I encountered an error processing your message. Please try again.' 
+                };
                 return newMessages;
             });
         } finally {
