@@ -10,3 +10,5 @@ export * from './AudioWaveIcon';
 export * from './ChatBubbleIcon';
 export * from './MicrophoneIcon';
 export * from './WandIcon';
+export * from './TrashIcon';
+export * from './DownloadIcon';
