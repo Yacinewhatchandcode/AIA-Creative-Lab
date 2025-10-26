@@ -30,11 +30,15 @@ interface SeedreamImageStatusResponse {
   };
 }
 
-const SEEDREAM_API_BASE_URL = 'https://api.kie.ai/api/v1';
+const KIE_FILE_API = 'https://kieai.redpandaai.co';
+const KIE_MAIN_API = 'https://api.kie.ai/api/v1';
 
 const getKieApiKey = (): string => {
   if (!process.env.KIE_API_KEY) {
-    throw new Error("KIE_API_KEY environment variable not set.");
+    throw new Error("KIE_API_KEY environment variable not set. Please configure your API key in the .env file.");
+  }
+  if (process.env.KIE_API_KEY.length < 10) {
+    throw new Error("Invalid KIE_API_KEY format. Please check your API key.");
   }
   return process.env.KIE_API_KEY;
 };
@@ -48,7 +52,7 @@ const pollForImageGeneration = async (taskId: string, maxWaitTime: number = 2 * 
       throw new Error("Image generation timed out.");
     }
 
-    const response = await fetch(`${SEEDREAM_API_BASE_URL}/seedream/task/${taskId}`, {
+    const response = await fetch(`${KIE_FILE_API}/4o-image/task/${taskId}`, {
       headers: {
         'Authorization': `Bearer ${getKieApiKey()}`,
       },
@@ -103,19 +107,51 @@ export const generateImageWithSeedream = async (
     guidance_scale: 7.5,
   };
 
-  const response = await fetch(`${SEEDREAM_API_BASE_URL}/seedream/generate`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getKieApiKey()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestPayload),
-  });
+  let response: Response;
+    
+    // Try Cloudflare R2 transformation first
+    try {
+      response = await fetch(`${KIE_FILE_API}/4o-image/generate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getKieApiKey()}`,
+          'Content-Type': 'application/json',
+          'CF-Access-Token': process.env.CF_ACCESS_TOKEN || undefined,
+        },
+        body: JSON.stringify({
+          prompt,
+          aspectRatio: aspectRatio === '16:9' ? '16:9' : aspectRatio === '9:16' ? '9:16' : '1:1',
+          model: 'seedream_4.0'
+        }),
+      });
+    } catch (cloudflareError) {
+      console.info('Cloudflare R2 not available for Seedream, trying direct API');
+    }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to generate image: ${response.statusText} - ${errorText}`);
-  }
+    // Fallback to direct KIE API if Cloudflare fails
+    if (!response || !response.ok) {
+      try {
+        response = await fetch(`${KIE_MAIN_API}/api/v1/4o-image/generate`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${getKieApiKey()}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt,
+            aspectRatio: aspectRatio === '16:9' ? '16:9' : aspectRatio === '9:16' ? '9:16' : '1:1',
+            model: 'seedream_4.0'
+          }),
+        });
+      } catch (directApiError) {
+        throw new Error(`Failed to connect to KIE API: ${directApiError instanceof Error ? directApiError.message : 'Network error'}`);
+      }
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to generate image: ${response.statusText} - ${errorText}`);
+    }
 
   const result: SeedreamImageGenerationResponse = await response.json();
   
@@ -142,14 +178,48 @@ export const editImageWithSeedream = async (prompt: string, imageFile: File): Pr
     guidance_scale: 7.5,
   };
 
-  const response = await fetch(`${SEEDREAM_API_BASE_URL}/seedream/edit`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getKieApiKey()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestPayload),
-  });
+  let response: Response;
+    
+    // Try Cloudflare R2 transformation first
+    try {
+      response = await fetch(`${KIE_FILE_API}/4o-image/edit`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getKieApiKey()}`,
+          'Content-Type': 'application/json',
+          'CF-Access-Token': process.env.CF_ACCESS_TOKEN || undefined,
+        },
+        body: JSON.stringify({
+          prompt,
+          imageBase64,
+          aspectRatio: '1:1',
+          model: 'seedream_4.0_edit'
+        }),
+      });
+    } catch (cloudflareError) {
+      console.info('Cloudflare R2 not available for Seedream edit, trying direct API');
+    }
+
+    // Fallback to direct KIE API if Cloudflare fails
+    if (!response || !response.ok) {
+      try {
+        response = await fetch(`${KIE_MAIN_API}/api/v1/4o-image/edit`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${getKieApiKey()}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt,
+            imageBase64,
+            aspectRatio: '1:1',
+            model: 'seedream_4.0_edit'
+          }),
+        });
+      } catch (directApiError) {
+        throw new Error(`Failed to connect to KIE API: ${directApiError instanceof Error ? directApiError.message : 'Network error'}`);
+      }
+    }
 
   if (!response.ok) {
     const errorText = await response.text();
