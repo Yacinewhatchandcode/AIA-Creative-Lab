@@ -5,12 +5,13 @@ import { MovieGenerator } from './components/MovieGenerator';
 import { ImageStudio } from './components/ImageStudio';
 import { Chatbot } from './components/Chatbot';
 import { LiveChat } from './components/LiveChat';
+import { CreativeStudio } from './components/CreativeStudio';
 
-type ActiveTab = 'movie' | 'image' | 'chat' | 'live';
+type ActiveTab = 'studio' | 'movie' | 'image' | 'chat' | 'live';
 
 const App: React.FC = () => {
   const [isApiKeyReady, setIsApiKeyReady] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('movie');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('studio');
 
   const checkApiKey = useCallback(async () => {
     if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
@@ -32,6 +33,8 @@ const App: React.FC = () => {
     }
 
     switch (activeTab) {
+      case 'studio':
+        return <CreativeStudio onApiKeyError={() => setIsApiKeyReady(false)} />;
       case 'movie':
         return <MovieGenerator onApiKeyError={() => setIsApiKeyReady(false)} />;
       case 'image':
@@ -41,7 +44,7 @@ const App: React.FC = () => {
       case 'live':
         return <LiveChat />;
       default:
-        return <MovieGenerator onApiKeyError={() => setIsApiKeyReady(false)} />;
+        return <CreativeStudio onApiKeyError={() => setIsApiKeyReady(false)} />;
     }
   };
 

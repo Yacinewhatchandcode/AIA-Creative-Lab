@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { FilmIcon, WandIcon, ChatBubbleIcon, MicrophoneIcon } from './icons';
+import { FilmIcon, WandIcon, ChatBubbleIcon, MicrophoneIcon, SparklesIcon } from './icons';
 import { HistoryGallery } from './HistoryGallery';
 
-type ActiveTab = 'movie' | 'image' | 'chat' | 'live';
+type ActiveTab = 'studio' | 'movie' | 'image' | 'chat' | 'live';
 
 interface HeaderProps {
     activeTab: ActiveTab;
@@ -66,6 +66,12 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
                         {/* Navigation */}
                         <nav className="glass-dark rounded-xl p-2 shadow-glow-cyan animate-fade-in">
                             <div className="flex flex-wrap justify-center sm:justify-start sm:flex-nowrap gap-1">
+                                <NavButton
+                                    isActive={activeTab === 'studio'}
+                                    onClick={() => setActiveTab('studio')}
+                                    icon={SparklesIcon}
+                                    label="Studio"
+                                />
                                 <NavButton
                                     isActive={activeTab === 'movie'}
                                     onClick={() => setActiveTab('movie')}
