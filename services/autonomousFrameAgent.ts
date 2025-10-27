@@ -1,5 +1,5 @@
 import { generateImageWithSeedream, editImageWithSeedream } from './seedreamService';
-import { generateVideoChunkWithKie } from './kieService';
+import { generateVideo } from './kieService';
 import { decideSceneCount, planStory } from './storyPlannerService';
 import { fileToBase64 } from '../utils/imageUtils';
 
@@ -480,7 +480,7 @@ class AutonomousFrameAgent {
       // Add delay to allow frame processing to complete
       setTimeout(async () => {
         try {
-          const videoUrl = await generateVideoChunkWithKie(task.prompt, task.enhancedFrame);
+          const videoUrl = await generateVideo(task.prompt, 'veo3_fast', '16:9', task.enhancedFrame);
           resolve(videoUrl);
         } catch (error) {
           reject(error);

@@ -1,38 +1,11 @@
-const KIE_MAIN_API = 'https://api.kie.ai/api/v1';
+import { validateInput } from "../utils/inputValidation";
 
-const getKieApiKey = (): string => {
-  if (!process.env.KIE_API_KEY) {
-    throw new Error("KIE_API_KEY environment variable not set.");
-  }
-  return process.env.KIE_API_KEY;
-};
-
-interface AudioGenerationRequest {
-  prompt: string;
-  model?: string;
-  duration?: number;
-  tags?: string[];
-  title?: string;
-}
+// Security: All API calls route through backend proxy
+const PROXY_BASE_URL = '/api';
 
 interface AudioGenerationResponse {
-  code: number;
-  msg: string;
-  data: {
-    taskId: string;
-  };
-}
-
-interface AudioStatusResponse {
-  code: number;
-  msg: string;
-  data: {
-    taskId: string;
-    status: string;
-    audioUrl?: string;
-    errorMessage?: string;
-    duration?: number;
-  };
+  audioUrl: string;
+  taskId: string;
 }
 
 /**
@@ -44,75 +17,33 @@ export const generateMusicForScene = async (
   totalScenes: number,
   onProgress?: (update: { stage: string; details?: string }) => void
 ): Promise<string> => {
+  validateInput(scenePrompt);
   onProgress?.({ stage: 'Creating music composition', details: 'Analyzing scene for appropriate music style' });
   
-  // Determine music style based on scene content
-  let musicStyle = 'cinematic';
-  let instrumentPrompt = '';
-  
-  const lowerPrompt = scenePrompt.toLowerCase();
-  
-  // Detect mood and style from scene
-  if (lowerPrompt.includes('action') || lowerPrompt.includes('fight') || lowerPrompt.includes('battle')) {
-    musicStyle = 'epic orchestral';
-    instrumentPrompt = 'orchestra, drums, brass section, intense percussion';
-  } else if (lowerPrompt.includes('sad') || lowerPrompt.includes('emotional') || lowerPrompt.includes('dramatic')) {
-    musicStyle = 'emotional piano';
-    instrumentPrompt = 'piano, strings, gentle melodies';
-  } else if (lowerPrompt.includes('happy') || lowerPrompt.includes('joyful') || lowerPrompt.includes('celebration')) {
-    musicStyle = 'upbeat';
-    instrumentPrompt = 'guitar, drums, bass, energetic rhythm';
-  } else if (lowerPrompt.includes('mysterious') || lowerPrompt.includes('suspense')) {
-    musicStyle = 'ambient';
-    instrumentPrompt = 'synthesizer, subtle pads, atmospheric sounds';
-  } else if (lowerPrompt.includes('nature') || lowerPrompt.includes('forest') || lowerPrompt.includes('ocean')) {
-    musicStyle = 'nature';
-    instrumentPrompt = 'flute, harp, nature sounds, peaceful';
+  try {
+    const response = await fetch(`${PROXY_BASE_URL}/audio/generate-music`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        scenePrompt,
+        sceneIndex,
+        totalScenes
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate music: ${response.statusText}`);
+    }
+
+    const result: AudioGenerationResponse = await response.json();
+    onProgress?.({ stage: 'Music complete', details: 'Background music ready for integration' });
+    return result.audioUrl;
+  } catch (e) {
+    console.error('Music generation failed:', e);
+    throw e;
   }
-  
-  // Create comprehensive music prompt
-  const musicPrompt = `${musicStyle} background music for scene ${sceneIndex + 1} of ${totalScenes}: ${scenePrompt}. ${instrumentPrompt}. ${duration || 20} seconds, suitable for cinematic use.`;
-  
-  const requestPayload: AudioGenerationRequest = {
-    prompt: musicPrompt,
-    model: 'suno-v4',
-    duration: 20, // 20 seconds per scene
-    tags: [musicStyle, 'cinematic', 'background'],
-    title: `Scene ${sceneIndex + 1} Background Music`
-  };
-  
-  onProgress?.({ stage: 'Generating music', details: `Using Suno V4 to create ${musicStyle} composition` });
-  
-  // Generate music using KIE's Suno API
-  const response = await fetch(`${KIE_MAIN_API}/suno/generate`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getKieApiKey()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestPayload),
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to generate music: ${response.statusText}`);
-  }
-  
-  const result: AudioGenerationResponse = await response.json();
-  
-  if (result.code !== 200) {
-    throw new Error(`Music generation request failed: ${result.msg}`);
-  }
-  
-  const taskId = result.data.taskId;
-  
-  onProgress?.({ stage: 'Processing music', details: 'Waiting for audio generation to complete' });
-  
-  // Poll for completion
-  const audioUrl = await pollForAudioCompletion(taskId);
-  
-  onProgress?.({ stage: 'Music complete', details: 'Background music ready for integration' });
-  
-  return audioUrl;
 };
 
 /**
@@ -123,39 +54,32 @@ export const generateVoiceover = async (
   characterVoice: 'male' | 'female' | 'neutral' = 'neutral',
   onProgress?: (update: { stage: string; details?: string }) => void
 ): Promise<string> => {
+  validateInput(dialog);
   onProgress?.({ stage: 'Creating voiceover', details: `Processing dialog with ${characterVoice} voice` });
   
-  // Enhance dialog with voice direction
-  const voicePrompt = `${dialog}. Voice: ${characterVoice}, natural tone, clear pronunciation, emotional and engaging delivery suitable for narration.`;
-  
-  const response = await fetch(`${KIE_MAIN_API}/tts/generate`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getKieApiKey()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      text: voicePrompt,
-      voice: characterVoice === 'male' ? 'en-us-male-1' : characterVoice === 'female' ? 'en-us-female-1' : 'en-us-neutral-1',
-      speed: 1.0,
-      pitch: 1.0,
-      emotion: 'engaging'
-    }),
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to generate voiceover: ${response.statusText}`);
+  try {
+    const response = await fetch(`${PROXY_BASE_URL}/audio/generate-voiceover`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        dialog,
+        characterVoice
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate voiceover: ${response.statusText}`);
+    }
+
+    const result: AudioGenerationResponse = await response.json();
+    onProgress?.({ stage: 'Voiceover complete', details: 'Audio ready for integration' });
+    return result.audioUrl;
+  } catch (e) {
+    console.error('Voiceover generation failed:', e);
+    throw e;
   }
-  
-  const result = await response.json();
-  
-  if (result.code !== 200) {
-    throw new Error(`Voiceover generation failed: ${result.msg}`);
-  }
-  
-  onProgress?.({ stage: 'Voiceover complete', details: 'Audio ready for integration' });
-  
-  return result.data.audioUrl;
 };
 
 /**
@@ -164,75 +88,35 @@ export const generateVoiceover = async (
 export const mixAudioTracks = async (
   musicUrl: string,
   voiceoverUrl: string,
-  balance: number = 0.3, // 30% music, 70% voiceover
+  balance: number = 0.3,
   onProgress?: (update: { stage: string }) => void
 ): Promise<string> => {
+  validateInput(musicUrl);
+  validateInput(voiceoverUrl);
   onProgress?.({ stage: 'Mixing audio tracks' });
   
-  const response = await fetch(`${KIE_MAIN_API}/audio/mix`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getKieApiKey()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      musicUrl,
-      voiceoverUrl,
-      musicVolume: balance,
-      voiceVolume: 1.0,
-      fadeDuration: 1.0 // 1 second fade
-    }),
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to mix audio: ${response.statusText}`);
-  }
-  
-  const result = await response.json();
-  
-  if (result.code !== 200) {
-    throw new Error(`Audio mixing failed: ${result.msg}`);
-  }
-  
-  return result.data.mixedAudioUrl;
-};
-
-/**
- * Poll for audio generation completion
- */
-const pollForAudioCompletion = async (
-  taskId: string,
-  maxWaitTime: number = 2 * 60 * 1000 // 2 minutes max
-): Promise<string> => {
-  const pollInterval = 5000; // Check every 5 seconds
-  const startTime = Date.now();
-  
-  while (true) {
-    if (Date.now() - startTime > maxWaitTime) {
-      throw new Error("Audio generation timed out.");
-    }
-    
-    const response = await fetch(`${KIE_MAIN_API}/suno/task/${taskId}`, {
+  try {
+    const response = await fetch(`${PROXY_BASE_URL}/audio/mix-tracks`, {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${getKieApiKey()}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        musicUrl,
+        voiceoverUrl,
+        balance
+      }),
     });
-    
+
     if (!response.ok) {
-      throw new Error(`Failed to check task status: ${response.statusText}`);
+      throw new Error(`Failed to mix audio: ${response.statusText}`);
     }
-    
-    const result: AudioStatusResponse = await response.json();
-    
-    if (result.data.status === 'completed' && result.data.audioUrl) {
-      return result.data.audioUrl;
-    }
-    
-    if (result.data.status === 'failed') {
-      throw new Error(`Audio generation failed: ${result.data.errorMessage || 'Unknown error'}`);
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+    const result: AudioGenerationResponse = await response.json();
+    return result.audioUrl;
+  } catch (e) {
+    console.error('Audio mixing failed:', e);
+    throw e;
   }
 };
 
@@ -246,18 +130,25 @@ export const generateSceneAudioPackage = async (
   totalScenes: number = 1,
   onProgress?: (update: { stage: string; details?: string }) => void
 ): Promise<string> => {
-  // 1. Generate background music
-  const musicUrl = await generateMusicForScene(scenePrompt, sceneIndex, totalScenes, onProgress);
+  validateInput(scenePrompt);
   
-  // 2. Generate voiceover if dialog exists
-  if (dialog && dialog.trim().length > 0) {
-    const voiceoverUrl = await generateVoiceover(dialog, 'neutral', onProgress);
+  try {
+    // Generate background music
+    const musicUrl = await generateMusicForScene(scenePrompt, sceneIndex, totalScenes, onProgress);
     
-    // 3. Mix music and voiceover
-    const mixedUrl = await mixAudioTracks(musicUrl, voiceoverUrl, 0.3, onProgress);
-    return mixedUrl;
+    // Generate voiceover if dialog exists
+    if (dialog && dialog.trim().length > 0) {
+      const voiceoverUrl = await generateVoiceover(dialog, 'neutral', onProgress);
+      
+      // Mix music and voiceover
+      const mixedUrl = await mixAudioTracks(musicUrl, voiceoverUrl, 0.3, onProgress);
+      return mixedUrl;
+    }
+    
+    // Return music-only track if no dialog
+    return musicUrl;
+  } catch (e) {
+    console.error('Scene audio package generation failed:', e);
+    throw e;
   }
-  
-  // Return music-only track if no dialog
-  return musicUrl;
 };

@@ -1,11 +1,7 @@
-const KIE_MAIN_API = 'https://api.kie.ai/api/v1';
+import { validateInput } from "../utils/inputValidation";
 
-const getKieApiKey = (): string => {
-  if (!process.env.KIE_API_KEY) {
-    throw new Error("KIE_API_KEY environment variable not set.");
-  }
-  return process.env.KIE_API_KEY;
-};
+// Security: All API calls route through backend proxy
+const PROXY_BASE_URL = '/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -67,6 +63,7 @@ export class ChatSession {
    * Send a message and get AI response
    */
   async sendMessage(message: string): Promise<string> {
+    validateInput(message);
     const history = this.service.getHistory(this.conversationId);
     
     // Add user message to history
@@ -77,22 +74,19 @@ export class ChatSession {
     });
     
     try {
-      // Use KIE's text generation API
-      const response = await fetch(`${KIE_MAIN_API}/chat/completions`, {
+      // Route through backend proxy
+      const response = await fetch(`${PROXY_BASE_URL}/chat/send-message`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${getKieApiKey()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini', // Use available text model
-          messages: history.map(msg => ({
+          message,
+          conversationId: this.conversationId,
+          history: history.map(msg => ({
             role: msg.role,
             content: msg.content
-          })),
-          temperature: 0.7,
-          max_tokens: 500,
-          stream: false
+          }))
         })
       });
       
@@ -101,7 +95,7 @@ export class ChatSession {
       }
       
       const result = await response.json();
-      const aiContent = result.choices?.[0]?.message?.content || 'I apologize, but I couldn\'t generate a response.';
+      const aiContent = result.content || 'I apologize, but I couldn\'t generate a response.';
       
       // Add AI response to history
       this.service.getHistory(this.conversationId).push({
@@ -137,6 +131,7 @@ export class ChatSession {
    * Stream message response
    */
   async sendMessageStream(message: string, onChunk: (chunk: string) => void): Promise<void> {
+    validateInput(message);
     const history = this.service.getHistory(this.conversationId);
     
     // Add user message to history
@@ -147,21 +142,18 @@ export class ChatSession {
     });
     
     try {
-      const response = await fetch(`${KIE_MAIN_API}/chat/completions`, {
+      const response = await fetch(`${PROXY_BASE_URL}/chat/send-message-stream`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${getKieApiKey()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: history.map(msg => ({
+          message,
+          conversationId: this.conversationId,
+          history: history.map(msg => ({
             role: msg.role,
             content: msg.content
-          })),
-          temperature: 0.7,
-          max_tokens: 500,
-          stream: true
+          }))
         })
       });
       
@@ -189,7 +181,7 @@ export class ChatSession {
             
             try {
               const parsed = JSON.parse(data);
-              const content = parsed.choices?.[0]?.delta?.content || '';
+              const content = parsed.content || '';
               if (content) {
                 aiContent += content;
                 onChunk(content);

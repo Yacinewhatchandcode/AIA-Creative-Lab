@@ -1,17 +1,169 @@
-if (!emailRegex.test(email)) {
+// Security: Comprehensive input validation and sanitization
+
+export interface ValidationError {
+  field: string;
+  message: string;
+  code: string;
+}
+
+class InputValidator {
+  private static instance: InputValidator;
+
+  private constructor() {}
+
+  public static getInstance(): InputValidator {
+    if (!InputValidator.instance) {
+      InputValidator.instance = new InputValidator();
+    }
+    return InputValidator.instance;
+  }
+
+  // Security: Validate text input for injection attacks
+  public validateTextInput(text: string, fieldName: string = 'input'): ValidationError[] {
+    const errors: ValidationError[] = [];
+
+    if (typeof text !== 'string') {
       errors.push({
-        field: 'email',
-        message: 'Invalid email format',
-        code: 'INVALID_EMAIL'
+        field: fieldName,
+        message: 'Input must be a string',
+        code: 'INVALID_TEXT_TYPE'
       });
+      return errors;
     }
 
     // Length validation
-    if (email.length > 254) { // RFC 5321 limit
+    if (text.length === 0) {
       errors.push({
-        field: 'email',
-        message: 'Email too long',
-        code: 'EMAIL_TOO_LONG'
+        field: fieldName,
+        message: 'Input cannot be empty',
+        code: 'EMPTY_INPUT'
+      });
+    }
+
+    if (text.length > 10000) {
+      errors.push({
+        field: fieldName,
+        message: 'Input too long (max 10000 chars)',
+        code: 'INPUT_TOO_LONG'
+      });
+    }
+
+    // Check for SQL injection patterns
+    const sqlPatterns = [
+      /(\bUNION\b|\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bDROP\b|\bEXEC\b)/gi,
+      /(-{2}|\/\*|\*\/|;)/g,
+      /xp_|sp_/gi
+    ];
+
+    for (const pattern of sqlPatterns) {
+      if (pattern.test(text)) {
+        errors.push({
+          field: fieldName,
+          message: 'Potentially malicious SQL content detected',
+          code: 'SQL_INJECTION_DETECTED'
+        });
+        break;
+      }
+    }
+
+    // Check for XSS patterns
+    const xssPatterns = [
+      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+      /javascript:/gi,
+      /on\w+\s*=/gi,
+      /vbscript:/gi
+    ];
+
+    for (const pattern of xssPatterns) {
+      if (pattern.test(text)) {
+        errors.push({
+          field: fieldName,
+          message: 'Potentially malicious script content detected',
+          code: 'XSS_DETECTED'
+        });
+        break;
+      }
+    }
+
+    return errors;
+  }
+
+  // Security: Validate aspect ratio
+  public validateAspectRatio(aspectRatio: string): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const validRatios = ['16:9', '9:16', '1:1', '4:3', '3:4'];
+
+    if (!validRatios.includes(aspectRatio)) {
+      errors.push({
+        field: 'aspectRatio',
+        message: `Invalid aspect ratio. Must be one of: ${validRatios.join(', ')}`,
+        code: 'INVALID_ASPECT_RATIO'
+      });
+    }
+
+    return errors;
+  }
+
+  // Security: Validate file uploads
+  public validateFileUpload(file: File): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4'];
+
+    if (!file) {
+      errors.push({
+        field: 'file',
+        message: 'File is required',
+        code: 'FILE_REQUIRED'
+      });
+      return errors;
+    }
+
+    if (file.size > maxSize) {
+      errors.push({
+        field: 'file',
+        message: `File too large (max 50MB)`,
+        code: 'FILE_TOO_LARGE'
+      });
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      errors.push({
+        field: 'file',
+        message: `Invalid file type. Allowed: ${allowedTypes.join(', ')}`,
+        code: 'INVALID_FILE_TYPE'
+      });
+    }
+
+    return errors;
+  }
+
+  // Security: Validate number input
+  public validateNumberInput(value: any, fieldName: string = 'number', min?: number, max?: number): ValidationError[] {
+    const errors: ValidationError[] = [];
+
+    if (typeof value !== 'number') {
+      errors.push({
+        field: fieldName,
+        message: 'Input must be a number',
+        code: 'INVALID_NUMBER_TYPE'
+      });
+      return errors;
+    }
+
+    if (min !== undefined && value < min) {
+      errors.push({
+        field: fieldName,
+        message: `Value must be at least ${min}`,
+        code: 'NUMBER_TOO_SMALL'
+      });
+    }
+
+    if (max !== undefined && value > max) {
+      errors.push({
+        field: fieldName,
+        message: `Value must be at most ${max}`,
+        code: 'NUMBER_TOO_LARGE'
       });
     }
 
@@ -25,17 +177,11 @@ if (!emailRegex.test(email)) {
     }
 
     return input
-      // Remove script tags
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      // Remove event handlers
       .replace(/on\w+\s*=/gi, '')
-      // Remove javascript: URLs
       .replace(/javascript:/gi, '')
-      // Remove vbscript: URLs
       .replace(/vbscript:/gi, '')
-      // Remove control characters
       .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-      // Trim whitespace
       .trim();
   }
 
@@ -43,7 +189,6 @@ if (!emailRegex.test(email)) {
   public validateApiPayload(payload: any): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    // Type checking
     if (typeof payload !== 'object' || payload === null) {
       errors.push({
         field: 'payload',
@@ -53,63 +198,28 @@ if (!emailRegex.test(email)) {
       return errors;
     }
 
-    // Check for nested dangerous content
     const checkNested = (obj: any, path: string = ''): void => {
       for (const [key, value] of Object.entries(obj)) {
         const currentPath = path ? `${path}.${key}` : key;
-
-        // Validate keys
         const keyErrors = this.validateTextInput(key, currentPath);
         errors.push(...keyErrors);
 
         if (typeof value === 'string') {
           const valueErrors = this.validateTextInput(value, currentPath);
           errors.push(...valueErrors);
-        } else if (typeof value === 'object' && value !== null) {
+        } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
           checkNested(value, currentPath);
         }
       }
     };
 
     checkNested(payload);
-
     return errors;
-  }
-
-  // Security: Rate limiting helper
-  public checkRateLimit(identifier: string, maxRequests: number = 100, windowMs: number = 60000): boolean {
-    // In production, implement actual rate limiting with Redis or similar
-    // This is a placeholder for demonstration
-    const now = Date.now();
-    const windowStart = now - windowMs;
-    
-    // Local storage implementation (not production-ready)
-    const storageKey = `rate_limit_${identifier}`;
-    const existingData = localStorage.getItem(storageKey);
-    
-    let requests: number[] = [];
-    if (existingData) {
-      requests = JSON.parse(existingData);
-    }
-
-    // Remove old requests outside the window
-    requests = requests.filter(timestamp => timestamp > windowStart);
-    
-    // Check if limit exceeded
-    if (requests.length >= maxRequests) {
-      return false;
-    }
-
-    // Add current request
-    requests.push(now);
-    localStorage.setItem(storageKey, JSON.stringify(requests));
-    
-    return true;
   }
 }
 
-// Export helper functions for easy usage
-export const validateText = (text: string, fieldName?: string): ValidationError[] => {
+// Export helper functions
+export const validateInput = (text: string, fieldName: string = 'input'): ValidationError[] => {
   return InputValidator.getInstance().validateTextInput(text, fieldName);
 };
 
@@ -131,8 +241,4 @@ export const sanitize = (input: string): string => {
 
 export const validateApiPayload = (payload: any): ValidationError[] => {
   return InputValidator.getInstance().validateApiPayload(payload);
-};
-
-export const checkRateLimit = (identifier: string, maxRequests?: number, windowMs?: number): boolean => {
-  return InputValidator.getInstance().checkRateLimit(identifier, maxRequests, windowMs);
 };

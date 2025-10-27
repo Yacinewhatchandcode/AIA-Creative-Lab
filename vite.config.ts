@@ -30,13 +30,10 @@ export default defineConfig(({ mode }) => {
       plugins: [react()],
       define: {
         // Security: Never expose API keys to client-side
-        'process.env': {
-            ...safeClientEnv,
-            CLIENT_SIDE_ONLY: 'true',
-            SECURITY_MODE: 'production',
-            INPUT_VALIDATION: 'enabled',
-            API_PROXY_REQUIRED: 'true'
-        },
+        'import.meta.env.CLIENT_SIDE_ONLY': JSON.stringify('true'),
+        'import.meta.env.SECURITY_MODE': JSON.stringify('production'),
+        'import.meta.env.INPUT_VALIDATION': JSON.stringify('enabled'),
+        'import.meta.env.API_PROXY_REQUIRED': JSON.stringify('true'),
       },
       resolve: {
         alias: {
